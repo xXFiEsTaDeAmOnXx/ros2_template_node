@@ -1,0 +1,32 @@
+---
+services:
+  __PKG_NAME__:
+    image: __PKG_NAME__
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        BASE_IMAGE: ros:jazzy
+    environment:
+      ROS_DOMAIN_ID: $ROS_DOMAIN_ID
+      DISPLAY: $DISPLAY
+      QT_X11_NO_MITSHM: '1'
+    network_mode: host
+    # Uncomment if you need GPU / hardware access (e.g. simulation, RViz):
+    # privileged: true
+    # runtime: nvidia
+    # environment:
+    #   NVIDIA_VISIBLE_DEVICES: all
+    #   NVIDIA_DRIVER_CAPABILITIES: compute,video,utility,graphics
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - $HOME/.Xauthority:/root/.Xauthority
+      - ./../__PKG_NAME__:/root/ros2_ws/src/__PKG_NAME__
+    command:
+      - bash
+      - -c
+      - |-
+        source /opt/ros/jazzy/setup.bash
+        source /root/ros2_ws/install/setup.bash
+        ros2 run __PKG_NAME__ __NODE_NAME__
+        tail -f /dev/null
