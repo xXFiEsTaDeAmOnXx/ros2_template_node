@@ -1,0 +1,11 @@
+build/
+install/
+log/
+*.o
+*.obj
+*.so
+*.a
+*.swp
+*.swo
+*~
+.DS_Store

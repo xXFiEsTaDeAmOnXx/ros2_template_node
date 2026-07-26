@@ -2,11 +2,11 @@
 #
 # create_package.sh
 #
-# Generates a new ROS 2 (ament_python) package from the template/ directory
-# next to this script: package.xml, setup.py/.cfg, a dummy node with a
-# timer + QoS'd publisher/subscriber, ament test boilerplate, a Dockerfile
-# and docker-compose service, and a README — all with the names you give
-# below.
+# Generates a new ROS 2 package (ament_python or ament_cmake, your choice)
+# from the template/ directory next to this script: package.xml, a dummy
+# node with a timer + QoS'd publisher/subscriber, build boilerplate, a
+# Dockerfile and docker-compose service, and a README — all with the names
+# you give below.
 #
 # Usage:
 #   ./create_package.sh [output_dir]
@@ -52,6 +52,20 @@ sed_escape_replacement() {
 
 # --- prompts ------------------------------------------------------------
 
+read -rp "Language [python/cpp] (default: python): " LANG_CHOICE
+LANG_CHOICE="${LANG_CHOICE:-python}"
+while [[ "$LANG_CHOICE" != "python" && "$LANG_CHOICE" != "cpp" ]]; do
+    echo "Please enter 'python' or 'cpp'."
+    read -rp "Language [python/cpp] (default: python): " LANG_CHOICE
+    LANG_CHOICE="${LANG_CHOICE:-python}"
+done
+
+LANG_TEMPLATE_DIR="${TEMPLATE_DIR}/${LANG_CHOICE}"
+if [ ! -d "$LANG_TEMPLATE_DIR" ]; then
+    echo "Error: template directory not found at '$LANG_TEMPLATE_DIR'." >&2
+    exit 1
+fi
+
 read -rp "Package name (snake_case, e.g. my_robot_node): " PKG_NAME
 while ! is_valid_ros_identifier "$PKG_NAME"; do
     echo "Invalid package name. Use lowercase letters, digits and underscores, starting with a letter."
@@ -85,6 +99,7 @@ fi
 
 echo
 echo "Generating package:"
+echo "  Language     : $LANG_CHOICE"
 echo "  Package name : $PKG_NAME"
 echo "  Node name    : $NODE_NAME"
 echo "  Class name   : $CLASS_NAME"
@@ -94,7 +109,10 @@ echo
 
 # --- copy template --------------------------------------------------------
 
-cp -r "$TEMPLATE_DIR" "$TARGET_DIR"
+mkdir -p "$TARGET_DIR"
+cp -r "$TEMPLATE_DIR/docker" "$TARGET_DIR/docker"
+cp "$LANG_TEMPLATE_DIR/README.md" "$TARGET_DIR/README.md"
+cp -r "$LANG_TEMPLATE_DIR/__PKG_NAME__" "$TARGET_DIR/__PKG_NAME__"
 
 # --- rename paths containing placeholders (deepest first) -----------------
 #
@@ -128,7 +146,9 @@ find "$TARGET_DIR" -type f -print0 | xargs -0 sed -i \
     -e "s/__AUTHOR_NAME__/${AUTHOR_NAME_ESC}/g" \
     -e "s/__AUTHOR_EMAIL__/${AUTHOR_EMAIL_ESC}/g"
 
-chmod +x "${TARGET_DIR}/${PKG_NAME}/${PKG_NAME}/${NODE_NAME}.py"
+if [ "$LANG_CHOICE" = "python" ]; then
+    chmod +x "${TARGET_DIR}/${PKG_NAME}/${PKG_NAME}/${NODE_NAME}.py"
+fi
 
 echo "Done. New package created at: $TARGET_DIR"
 echo
